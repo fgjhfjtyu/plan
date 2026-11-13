@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>QET Mobile</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;font-family:sans-serif;background:#e9ecef;color:#222;user-select:none;-webkit-user-select:none}
+body{display:flex;flex-direction:column}
+#top{display:flex;align-items:center;gap:4px;background:#1e5aa8;color:#fff;padding:4px 6px;height:48px;flex:none}
+#top .ttl{flex:1;font-size:14px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 6px}
+button{font:inherit;border:0;background:transparent;color:inherit;cursor:pointer}
+#top button{width:40px;height:40px;font-size:20px;border-radius:8px}
+#top button:active{background:rgba(255,255,255,.25)}
+#pages{display:flex;gap:4px;overflow-x:auto;background:#d0d7de;padding:4px 6px;height:36px;flex:none;align-items:center}
+#pages button{flex:none;padding:4px 12px;border-radius:14px;background:#fff;font-size:13px;color:#333}
+#pages button.on{background:#1e5aa8;color:#fff}
+#cvw{flex:1;position:relative;min-height:0}
+#cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+#hint{position:absolute;left:8px;right:8px;top:8px;background:rgba(30,30,30,.82);color:#fff;font-size:13px;padding:6px 10px;border-radius:8px;pointer-events:none;display:none;text-align:center}
+#bar{display:flex;flex:none;background:#fff;border-top:1px solid #bbb;height:58px}
+#bar button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:19px;color:#333;gap:1px;min-width:0}
+#bar button span{font-size:10px;color:#555}
+#bar button.on{background:#dbe8fb;color:#1e5aa8}
+#bar button:disabled{opacity:.3}
+#sheet{position:fixed;left:0;right:0;bottom:0;height:62%;background:#fff;border-radius:14px 14px 0 0;box-shadow:0 -4px 20px rgba(0,0,0,.35);display:none;flex-direction:column;z-index:20}
+#sheet .hd{display:flex;gap:6px;padding:8px;align-items:center}
+#sheet input{flex:1;padding:8px;font-size:15px;border:1px solid #bbb;border-radius:8px}
+#sheet .grid{flex:1;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px;padding:8px}
+.item{border:1px solid #ccd;border-radius:8px;padding:4px;text-align:center;font-size:11px;background:#fafbfc}
+.item canvas{width:80px;height:64px;display:block;margin:0 auto 2px}
+.item div{height:28px;overflow:hidden}
+#sheet .tabs{display:flex;gap:6px;padding:0 8px 6px;align-items:center;flex-wrap:wrap}
+#sheet .tabs button{padding:6px 12px;border-radius:14px;background:#eee;font-size:13px;color:#333}
+#sheet .tabs button.on{background:#1e5aa8;color:#fff}
+#sheet select{margin:0 8px 6px;padding:6px;font-size:13px;border:1px solid #bbb;border-radius:8px;display:none}
+#sheet .info{padding:0 10px 4px;font-size:12px;color:#555}
+#menu{position:fixed;top:48px;right:6px;background:#fff;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.35);display:none;z-index:30;min-width:200px;overflow:hidden}
+#menu button{display:block;width:100%;text-align:right;padding:12px 16px;font-size:15px;color:#222;border-bottom:1px solid #eee}
+#menu button:active{background:#eef}
+#dlg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:50}
+#dlg .box{background:#fff;border-radius:12px;padding:16px;width:86%;max-width:380px}
+#dlg h3{margin:0 0 10px;font-size:16px}
+#dlg input{width:100%;padding:10px;font-size:16px;border:1px solid #aaa;border-radius:8px;user-select:text;-webkit-user-select:text}
+#dlg .row{display:flex;gap:8px;margin-top:12px;justify-content:flex-start}
+#dlg .row button{padding:8px 18px;border-radius:8px;background:#eee;font-size:15px}
+#dlg .row button#dlgOk{background:#1e5aa8;color:#fff}
+</style>
+</head>
+<body>
+<div id="top">
+  <button id="bMenu" title="منو">☰</button>
+  <div class="ttl" id="title">پروژه جدید</div>
+  <button id="bOpen" title="باز کردن">📂</button>
+  <button id="bSave" title="ذخیره">💾</button>
+  <button id="bUndo" title="بازگشت">↶</button>
+  <button id="bFit" title="نمایش کامل">⤢</button>
+</div>
+<div id="pages"></div>
+<div id="cvw"><canvas id="cv"></canvas><div id="hint"></div></div>
+<div id="bar">
+  <button id="tSelect" class="on">✋<span>انتخاب/حرکت</span></button>
+  <button id="tWire">〰<span>سیم</span></button>
+  <button id="tText">T<span>متن</span></button>
+  <button id="tAdd">➕<span>قطعه</span></button>
+  <button id="tRot">⟳<span>چرخش</span></button>
+  <button id="tLbl">🏷<span>برچسب</span></button>
+  <button id="tDel">🗑<span>حذف</span></button>
+</div>
+<div id="sheet">
+  <div class="hd"><input id="q" placeholder="جستجوی قطعه..."><button id="sClose" style="font-size:22px;padding:4px 10px">✕</button></div>
+  <div class="tabs"><button id="tabB" class="on">قطعات من</button><button id="tabL">کتابخانهٔ QET</button><button id="bLibImp">⬇ فایل</button><button id="bLibDir">📁 پوشه</button></div>
+  <select id="cat"></select><div class="info" id="info"></div>
+  <div class="grid" id="grid"></div>
+</div>
+<div id="menu"></div>
+<div id="dlg"><div class="box"><h3 id="dlgT"></h3><input id="dlgI"><div class="row"><button id="dlgOk">تأیید</button><button id="dlgNo">لغو</button></div></div></div>
+<input type="file" id="fileIn" accept=".qet,.xml,text/xml,application/xml" style="display:none">
+
+<script>
+'use strict';
+/* ====================== helpers ====================== */
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const uid = () => '{' + 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+  const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16);
+}) + '}';
+const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const num = (v, d) => { const n = parseFloat(v); return isFinite(n) ? n : (d || 0); };
+const ROT = (x, y, o) => o === 0 ? [x, y] : o === 1 ? [-y, x] : o === 2 ? [-x, -y] : [y, -x];
+const DIR = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+function ori(v) {
+  if (v == null) return 0;
+  if (/^-?\d+$/.test(String(v))) return ((parseInt(v, 10) % 4) + 4) % 4;
+  return ({ n: 0, e: 1, s: 2, w: 3 })[String(v).toLowerCase()] || 0;
+}
+const kids = (el, tag) => el ? Array.from(el.children).filter(c => c.tagName === tag) : [];
+const kid = (el, tag) => kids(el, tag)[0] || null;
+const snap = v => Math.round(v / 10) * 10;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+const S = {
+  title: 'پروژه جدید', fileName: 'project.qet', pages: [], cur: 0, defs: {}, builtin: {},
+  view: { x: 30, y: 40, k: 0.6 }, tool: 'select', sel: null, wireFrom: null, undo: [], n: 1
+};
+let DPR = window.devicePixelRatio || 1;
+const page = () => S.pages[S.cur];
+
+/* ====================== element definitions ====================== */
+const WT = { none: 0, thin: 0.5, normal: 1, hight: 2, eleve: 5 };
+const DASH = { dashed: [5, 3], dotted: [1.5, 3], dashdotted: [5, 3, 1.5, 3] };
+function parseStyle(s) {
+  const o = {};
+  String(s || '').split(';').forEach(p => { const i = p.indexOf(':'); if (i > 0) o[p.slice(0, i).trim()] = p.slice(i + 1).trim(); });
+  return o;
+}
+function parseFont(f, d) {
+  if (!f) return d || 9;
+  const n = parseFloat(String(f).split(',')[1]);
+  return isFinite(n) && n > 0 ? n : (d || 9);
+}
+
+function parseDef(df, key) {
+  const d = { key, name: key.split('/').pop().replace(/\.elmt$/, ''), shapes: [], terms: [], xml: new XMLSerializer().serializeToString(df) };
+  const names = kid(df, 'names');
+  if (names) {
+    const ns = kids(names, 'name');
+    const pick = ns.find(n => n.getAttribute('lang') === 'fa') || ns.find(n => n.getAttribute('lang') === 'en') || ns[0];
+    if (pick && pick.textContent.trim()) d.name = pick.textContent.trim();
+  }
+  const desc = kid(df, 'description');
+  if (desc) for (const c of Array.from(desc.children)) {
+    const A = n => num(c.getAttribute(n));
+    const st = parseStyle(c.getAttribute('style'));
+    switch (c.tagName) {
+      case 'line': d.shapes.push({ t: 'line', x1: A('x1'), y1: A('y1'), x2: A('x2'), y2: A('y2'), st }); break;
+      case 'rect': d.shapes.push({ t: 'rect', x: A('x'), y: A('y'), w: A('width'), h: A('height'), st }); break;
+      case 'ellipse': d.shapes.push({ t: 'ellipse', x: A('x'), y: A('y'), w: A('width'), h: A('height'), st }); break;
+      case 'circle': d.shapes.push({ t: 'ellipse', x: A('x'), y: A('y'), w: A('diameter'), h: A('diameter'), st }); break;
+      case 'arc': d.shapes.push({ t: 'arc', x: A('x'), y: A('y'), w: A('width'), h: A('height'), s: A('start'), a: A('angle'), st }); break;
+      case 'polygon': {
+        const pts = [];
+        for (let i = 1; c.hasAttribute('x' + i); i++) pts.push([A('x' + i), A('y' + i)]);
+        d.shapes.push({ t: 'poly', pts, closed: c.getAttribute('closed') !== 'false', st });
+        break;
+      }
+      case 'text': d.shapes.push({ t: 'text', x: A('x'), y: A('y'), text: c.getAttribute('text') || '', size: c.hasAttribute('size') ? A('size') : parseFont(c.getAttribute('font'), 9), rot: A('rotation'), st, color: c.getAttribute('color') }); break;
+      case 'terminal': d.terms.push({ x: A('x'), y: A('y'), o: ori(c.getAttribute('orientation')) }); break;
+    }
+  }
+  d.bbox = bboxOf(d);
+  return d;
+}
+function bboxOf(d) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  const add = (x, y) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); };
+  d.shapes.forEach(s => {
+    if (s.t === 'line') { add(s.x1, s.y1); add(s.x2, s.y2); }
+    else if (s.t === 'rect' || s.t === 'ellipse' || s.t === 'arc') { add(s.x, s.y); add(s.x + s.w, s.y + s.h); }
+    else if (s.t === 'poly') s.pts.forEach(p => add(p[0], p[1]));
+    else if (s.t === 'text') { add(s.x, s.y); add(s.x + s.text.length * s.size * 0.6, s.y + s.size * 1.2); }
+  });
+  d.terms.forEach(t => add(t.x, t.y));
+  if (x0 > x1) return [-10, -10, 20, 20];
+  return [x0, y0, x1 - x0, y1 - y0];
+}
+function col(n, def) { return n && /^[#a-zA-Z0-9(),. ]+$/.test(n) ? n : def; }
+
+function drawShape(c, s) {
+  const st = s.st || {};
+  const lw = (st['line-weight'] in WT) ? WT[st['line-weight']] : 1;
+  c.save();
+  c.lineCap = 'butt';
+  c.lineWidth = lw || 1;
+  c.strokeStyle = 'black';
+  c.strokeStyle = col(st.color, 'black');
+  c.setLineDash(DASH[st['line-style']] || []);
+  const filled = st.filling && st.filling !== 'none';
+  c.fillStyle = 'rgba(0,0,0,.3)';
+  if (filled) c.fillStyle = col(st.filling, 'rgba(0,0,0,.3)');
+  if (s.t === 'text') {
+    c.setLineDash([]);
+    c.fillStyle = 'black';
+    c.fillStyle = col(s.color, 'black');
+    c.font = s.size + 'px sans-serif';
+    c.textBaseline = 'top';
+    c.textAlign = 'left';
+    c.translate(s.x, s.y);
+    if (s.rot) c.rotate(s.rot * Math.PI / 180);
+    c.fillText(s.text, 0, 0);
+    c.restore();
+    return;
+  }
+  c.beginPath();
+  if (s.t === 'line') { c.moveTo(s.x1, s.y1); c.lineTo(s.x2, s.y2); }
+  else if (s.t === 'rect') c.rect(s.x, s.y, s.w, s.h);
+  else if (s.t === 'ellipse') c.ellipse(s.x + s.w / 2, s.y + s.h / 2, Math.abs(s.w / 2), Math.abs(s.h / 2), 0, 0, Math.PI * 2);
+  else if (s.t === 'arc') {
+    const r = Math.PI / 180;
+    c.ellipse(s.x + s.w / 2, s.y + s.h / 2, Math.abs(s.w / 2), Math.abs(s.h / 2), 0, -s.s * r, -(s.s + s.a) * r, s.a > 0);
+  } else if (s.t === 'poly') {
+    s.pts.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]));
+    if (s.closed) c.closePath();
+  }
+  if (filled && s.t !== 'line' && !(s.t === 'arc')) c.fill();
+  if (lw > 0 || !filled) c.stroke();
+  c.restore();
+}
+
+/* Built-in symbols (same XML format as QElectroTech element definitions) */
+const BI = 'embed://import/qetmobile/';
+const ST = 'line-style:normal;line-weight:normal;filling:none;color:black';
+const STF = 'line-style:normal;line-weight:normal;filling:black;color:black';
+const L = (a, b, c, d) => `<line x1="${a}" y1="${b}" x2="${c}" y2="${d}" style="${ST}" antialias="true"/>`;
+const T = (x, y, o) => `<terminal x="${x}" y="${y}" orientation="${o}"/>`;
+const R = (x, y, w, h) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" style="${ST}" antialias="true"/>`;
+const C = (x, y, d, f) => `<circle x="${x}" y="${y}" diameter="${d}" style="${f ? STF : ST}" antialias="true"/>`;
+const TX = (x, y, t, s) => `<text x="${x}" y="${y}" text="${t}" font="Sans Serif,${s || 10},-1,5,50,0,0,0,0,0"/>`;
+const V2 = (y1, y2) => L(0, -y1, 0, -y2) + L(0, y2, 0, y1) + T(0, -y1, 0) + T(0, y1, 2);
+const BUILTINS = [
+  ['resistor', 'مقاومت', 'Resistor', 20, 50, R(-5, -12, 10, 24) + V2(20, 12)],
+  ['contact_no', 'کنتاکت باز (NO)', 'Contact NO', 30, 50, L(0, -20, 0, -8) + L(0, 20, 0, 8) + L(0, 8, -8, -6) + T(0, -20, 0) + T(0, 20, 2)],
+  ['contact_nc', 'کنتاکت بسته (NC)', 'Contact NC', 30, 50, L(0, -20, 0, -8) + L(0, -8, -6, -8) + L(0, 20, 0, 8) + L(0, 8, -4, -8) + T(0, -20, 0) + T(0, 20, 2)],
+  ['switch', 'کلید', 'Switch', 30, 50, L(0, -20, 0, -8) + L(0, 20, 0, 8) + L(0, 8, -8, -6) + C(-2, -10, 4, 1) + C(-2, 6, 4, 1) + T(0, -20, 0) + T(0, 20, 2)],
+  ['lamp', 'لامپ', 'Lamp', 30, 50, C(-12, -12, 24) + L(-8.5, -8.5, 8.5, 8.5) + L(8.5, -8.5, -8.5, 8.5) + V2(20, 12)],
+  ['motor', 'موتور', 'Motor', 40, 60, C(-15, -15, 30) + TX(-4, -7, 'M', 11) + V2(25, 15)],
+  ['coil', 'کوئل / رله', 'Coil', 30, 50, R(-10, -7, 20, 14) + V2(17, 7)],
+  ['fuse', 'فیوز', 'Fuse', 20, 50, R(-4, -10, 8, 20) + L(0, -10, 0, 10) + V2(20, 10)],
+  ['capacitor', 'خازن', 'Capacitor', 30, 40, L(-10, -3, 10, -3) + L(-10, 3, 10, 3) + L(0, -15, 0, -3) + L(0, 3, 0, 15) + T(0, -15, 0) + T(0, 15, 2)],
+  ['diode', 'دیود', 'Diode', 30, 50, `<polygon x1="-8" y1="-8" x2="8" y2="-8" x3="0" y3="6" closed="true" style="${STF}" antialias="true"/>` + L(-8, 6, 8, 6) + V2(20, 8)],
+  ['battery', 'باتری / منبع DC', 'DC source', 30, 40, L(-10, -3, 10, -3) + L(-5, 3, 5, 3).replace('normal', 'hight') + L(0, -14, 0, -3) + L(0, 3, 0, 14) + T(0, -14, 0) + T(0, 14, 2)],
+  ['ac_source', 'منبع AC', 'AC source', 40, 60, C(-15, -15, 30) + TX(-4, -7, '~', 12) + V2(25, 15)],
+  ['voltmeter', 'ولت‌متر', 'Voltmeter', 30, 50, C(-12, -12, 24) + TX(-4, -7, 'V', 10) + V2(20, 12)],
+  ['ammeter', 'آمپرمتر', 'Ammeter', 30, 50, C(-12, -12, 24) + TX(-4, -7, 'A', 10) + V2(20, 12)],
+  ['terminal', 'ترمینال (بورن)', 'Terminal', 20, 40, C(-3, -3, 6) + L(0, -10, 0, -3) + L(0, 3, 0, 10) + T(0, -10, 0) + T(0, 10, 2)],
+  ['ground', 'زمین', 'Ground', 30, 30, L(0, -10, 0, 0) + L(-10, 0, 10, 0) + L(-6, 4, 6, 4) + L(-2, 8, 2, 8) + T(0, -10, 0)],
+  ['node', 'نقطهٔ اتصال', 'Junction', 20, 20, C(-2, -2, 4, 1) + T(0, 0, 0)]
+];
+function initBuiltins() {
+  const P = new DOMParser();
+  BUILTINS.forEach(b => {
+    const [id, fa, en, w, h, body] = b;
+    const xml = `<definition type="element" version="0.3" width="${w}" height="${h}" hotspot_x="${w / 2}" hotspot_y="${h / 2}"><names><name lang="en">${en}</name><name lang="fa">${fa}</name></names><description>${body}</description></definition>`;
+    const doc = P.parseFromString(xml, 'application/xml');
+    const d = parseDef(doc.documentElement, BI + id + '.elmt');
+    d.builtin = true;
+    S.defs[d.key] = d;
+  });
+}
+
+/* ====================== project model ====================== */
+const DEFC = { type: 'multi', condsize: '1', cable: '', bus: '', function: '', tension_protocol: '', conductor_color: '', conductor_section: '', text_color: '#000000', color2: '#000000', displaytext: '0', onetextperfolio: '0', 'vertical-alignment': 'AlignRight', 'horizontal-alignment': 'AlignBottom', horizrotatetext: '0', vertirotatetext: '0', formula: '', num: '', freezeLabel: 'false', 'dash-size': '1', bicolor: 'false', numsize: '9', x: '0', y: '0' };
+function newPage(title) {
+  return { title: title || 'صفحه ' + (S.pages.length + 1), cols: 17, rows: 8, colsize: 60, rowsize: 80, elements: [], conductors: [], texts: [], attrs: {}, maxT: 0 };
+}
+function newProject() {
+  S.title = 'پروژه جدید'; S.fileName = 'project.qet';
+  S.pages = [newPage('صفحه 1')]; S.cur = 0; S.sel = null; S.wireFrom = null; S.undo = [];
+  S.view = { x: 30, y: 40, k: 1.1 }; refresh();
+}
+
+function parseElement(x, p) {
+  const e = { id: ++S.n, type: x.getAttribute('type') || '', x: num(x.getAttribute('x')), y: num(x.getAttribute('y')), z: num(x.getAttribute('z'), 10), o: ori(x.getAttribute('orientation')), uuid: x.getAttribute('uuid') || uid(), prefix: x.getAttribute('prefix') || '', terms: [], texts: [], info: {} };
+  kids(kid(x, 'terminals'), 'terminal').forEach(t => {
+    const id = parseInt(t.getAttribute('id'), 10);
+    e.terms.push({ id, x: num(t.getAttribute('x')), y: num(t.getAttribute('y')), o: ori(t.getAttribute('orientation')), name: t.getAttribute('name') || '_', number: t.getAttribute('number') || '_' });
+    if (id > p.maxT) p.maxT = id;
+  });
+  kids(kid(x, 'elementInformations'), 'elementInformation').forEach(i => { e.info[i.getAttribute('name')] = i.textContent; });
+  kids(kid(x, 'dynamic_texts'), 'dynamic_elmt_text').forEach(d => {
+    const tx = kid(d, 'text'), inf = kid(d, 'info_name');
+    const from = d.getAttribute('text_from') || 'UserText';
+    let text = tx ? tx.textContent : '';
+    const info = inf ? inf.textContent : '';
+    if (from === 'ElementInfo' && info && e.info[info] != null) text = e.info[info];
+    e.texts.push({ x: num(d.getAttribute('x')), y: num(d.getAttribute('y')), text, size: parseFont(d.getAttribute('font'), 7), from, info, uuid: d.getAttribute('uuid') || uid() });
+  });
+  return e;
+}
+
+function loadXml(text, name) {
+  const doc = new DOMParser().parseFromString(text, 'application/xml');
+  if (doc.querySelector('parsererror')) throw new Error('فایل XML معتبر نیست');
+  const root = doc.documentElement;
+  if (root.tagName !== 'project') throw new Error('این فایل پروژهٔ QElectroTech (.qet) نیست');
+  // embedded element collection -> library
+  const walk = (node, path) => {
+    Array.from(node.children).forEach(c => {
+      if (c.tagName === 'category') walk(c, path.concat(c.getAttribute('name')));
+      else if (c.tagName === 'element') {
+        const df = kid(c, 'definition');
+        if (df) { const key = 'embed://' + path.concat(c.getAttribute('name')).join('/'); S.defs[key] = parseDef(df, key); }
+      }
+    });
+  };
+  const colEl = kid(root, 'collection');
+  if (colEl) walk(colEl, []);
+
+  const pages = [];
+  kids(root, 'diagram').forEach((d, i) => {
+    const p = newPage(d.getAttribute('title') || 'صفحه ' + (i + 1));
+    p.attrs = {};
+    Array.from(d.attributes).forEach(a => { p.attrs[a.name] = a.value; });
+    p.cols = num(p.attrs.cols, 17); p.rows = num(p.attrs.rows, 8);
+    p.colsize = num(p.attrs.colsize, 60); p.rowsize = num(p.attrs.rowsize, 80);
+    kids(kid(d, 'elements'), 'element').forEach(x => p.elements.push(parseElement(x, p)));
+    kids(kid(d, 'conductors'), 'conductor').forEach(x => {
+      const a = {}; Array.from(x.attributes).forEach(at => { a[at.name] = at.value; });
+      const t1 = parseInt(a.terminal1, 10), t2 = parseInt(a.terminal2, 10);
+      if (isFinite(t1) && isFinite(t2)) p.conductors.push({ id: ++S.n, t1, t2, attrs: a });
+    });
+    kids(kid(d, 'inputs'), 'input').forEach(x => {
+      let t = x.getAttribute('text') || '';
+      if (/<\s*(html|p|body)/i.test(t)) { const h = new DOMParser().parseFromString(t, 'text/html'); h.querySelectorAll('style,head').forEach(n => n.remove()); t = h.body.textContent.trim(); }
+      p.texts.push({ id: ++S.n, x: num(x.getAttribute('x')), y: num(x.getAttribute('y')), text: t, size: parseFont(x.getAttribute('font'), 9) * 1.2, rot: num(x.getAttribute('rotation')) });
+    });
+    pages.push(p);
+  });
+  if (!pages.length) pages.push(newPage('صفحه 1'));
+  S.title = root.getAttribute('title') || name.replace(/\.qet$/i, '');
+  S.fileName = /\.qet$/i.test(name) ? name : name + '.qet';
+  S.pages = pages; S.cur = 0; S.sel = null; S.wireFrom = null; S.undo = [];
+  saveLib();
+}
+
+/* ---- save ---- */
+function buildXml() {
+  const used = new Set();
+  S.pages.forEach(p => p.elements.forEach(e => used.add(e.type)));
+  const p0 = S.pages[0];
+  let x = '<project title="' + esc(S.title) + '" version="0.80">\n';
+  x += ' <properties/>\n <newdiagrams>\n  <border cols="' + p0.cols + '" rows="' + p0.rows + '" colsize="' + p0.colsize + '" rowsize="' + p0.rowsize + '" displaycols="true" displayrows="true"/>\n </newdiagrams>\n';
+  S.pages.forEach((p, i) => {
+    const a = Object.assign({ folio: '%id/%total', displayAt: 'bottom', version: '0.80', author: '', date: 'null', filename: '', plant: '', locmach: '', indexrev: '', freezeNewElement: 'false', freezeNewConductor: 'false', auto_page_num: '', displaycols: 'true', displayrows: 'true' }, p.attrs, { title: p.title, cols: p.cols, rows: p.rows, colsize: p.colsize, rowsize: p.rowsize, height: p.rows * p.rowsize + 20, order: i + 1 });
+    x += ' <diagram' + Object.keys(a).map(k => ' ' + k + '="' + esc(a[k]) + '"').join('') + '>\n';
+    x += '  <defaultconductor' + Object.keys(DEFC).map(k => ' ' + k + '="' + esc(DEFC[k]) + '"').join('') + '/>\n  <elements>\n';
+    p.elements.forEach(e => {
+      x += '   <element type="' + esc(e.type) + '" x="' + e.x + '" y="' + e.y + '" z="' + (e.z || 10) + '" orientation="' + e.o + '" uuid="' + esc(e.uuid) + '" prefix="' + esc(e.prefix || '') + '" freezeLabel="false">\n    <terminals>\n';
+      e.terms.forEach(t => { x += '     <terminal id="' + t.id + '" x="' + t.x + '" y="' + t.y + '" orientation="' + t.o + '" name="' + esc(t.name || '_') + '" number="' + esc(t.number || '_') + '" nameHidden="0"/>\n'; });
+      x += '    </terminals>\n    <inputs/>\n    <elementInformations>\n';
+      Object.keys(e.info).forEach(k => { x += '     <elementInformation show="1" name="' + esc(k) + '">' + esc(e.info[k]) + '</elementInformation>\n'; });
+      x += '    </elementInformations>\n    <dynamic_texts>\n';
+      e.texts.forEach(t => {
+        x += '     <dynamic_elmt_text x="' + t.x + '" y="' + t.y + '" rotation="0" font="Sans Serif,' + Math.round(t.size) + ',-1,5,50,0,0,0,0,0,Normal" text_from="' + (t.info ? 'ElementInfo' : 'UserText') + '" uuid="' + esc(t.uuid || uid()) + '" frame="false" Halignment="AlignLeft" Valignment="AlignTop" text_width="-1" keep_visual_rotation="true">\n      <text>' + esc(t.text) + '</text>\n' + (t.info ? '      <info_name>' + esc(t.info) + '</info_name>\n' : '') + '     </dynamic_elmt_text>\n';
+      });
+      x += '    </dynamic_texts>\n    <texts_groups/>\n   </element>\n';
+    });
+    x += '  </elements>\n  <conductors>\n';
+    p.conductors.forEach(c => {
+      const a2 = Object.assign({}, DEFC, c.attrs || {}, { terminal1: c.t1, terminal2: c.t2 });
+      x += '   <conductor' + Object.keys(a2).map(k => ' ' + k + '="' + esc(a2[k]) + '"').join('') + '>\n    <sequentialNumbers/>\n   </conductor>\n';
+    });
+    x += '  </conductors>\n  <inputs>\n';
+    p.texts.forEach(t => { x += '   <input x="' + t.x + '" y="' + t.y + '" rotation="' + (t.rot || 0) + '" font="Sans Serif,' + Math.max(1, Math.round(t.size / 1.2)) + ',-1,5,50,0,0,0,0,0,Normal" text="' + esc(t.text) + '"/>\n'; });
+    x += '  </inputs>\n </diagram>\n';
+  });
+  // collection with the definitions that are used
+  const tree = { c: {}, e: [] };
+  used.forEach(key => {
+    const d = S.defs[key]; if (!d || key.indexOf('embed://') !== 0) return;
+    const parts = key.slice(8).split('/'); let n = tree;
+    for (let i = 0; i < parts.length - 1; i++) { n.c[parts[i]] = n.c[parts[i]] || { c: {}, e: [] }; n = n.c[parts[i]]; }
+    n.e.push({ name: parts[parts.length - 1], xml: d.xml });
+  });
+  const ser = (n, ind) => {
+    let s = '';
+    Object.keys(n.c).forEach(k => { s += ind + '<category name="' + esc(k) + '">\n' + ind + ' <names><name lang="en">' + esc(k) + '</name></names>\n' + ser(n.c[k], ind + ' ') + ind + '</category>\n'; });
+    n.e.forEach(e => { s += ind + '<element name="' + esc(e.name) + '">\n' + e.xml + '\n' + ind + '</element>\n'; });
+    return s;
+  };
+  x += ' <collection>\n' + ser(tree, '  ') + ' </collection>\n</project>\n';
+  return x;
+}
+
+/* library persistence */
+function saveLib() {
+  try {
+    const o = {}; Object.keys(S.defs).forEach(k => { if (!S.defs[k].builtin && !S.defs[k].lib) o[k] = S.defs[k].xml; });
+    localStorage.setItem('qet_lib', JSON.stringify(o));
+  } catch (e) { /* storage full: ignore */ }
+}
+function loadLib() {
+  try {
+    const o = JSON.parse(localStorage.getItem('qet_lib') || '{}'); const P = new DOMParser();
+    Object.keys(o).forEach(k => { const doc = P.parseFromString(o[k], 'application/xml'); if (!doc.querySelector('parsererror')) S.defs[k] = parseDef(doc.documentElement, k); });
+  } catch (e) { /* ignore */ }
+}
+let autoT = null;
+function autosave() {
+  clearTimeout(autoT);
+  autoT = setTimeout(() => { try { localStorage.setItem('qet_auto', buildXml()); localStorage.setItem('qet_auto_name', S.fileName); } catch (e) { /* ignore */ } }, 600);
+}
+
+/* ====================== geometry ====================== */
+function buildTM(p) {
+  const m = new Map();
+  p.elements.forEach(e => e.terms.forEach(t => {
+    const r = ROT(t.x, t.y, e.o);
+    m.set(t.id, { x: e.x + r[0], y: e.y + r[1], dir: (t.o + e.o) % 4, el: e });
+  }));
+  p._tm = m;
+  return m;
+}
+function condPts(p, c) {
+  const m = p._tm || buildTM(p);
+  const a = m.get(c.t1), b = m.get(c.t2);
+  if (!a || !b) return null;
+  const da = DIR[a.dir], db = DIR[b.dir], Ln = 12;
+  const a1 = { x: a.x + da[0] * Ln, y: a.y + da[1] * Ln }, b1 = { x: b.x + db[0] * Ln, y: b.y + db[1] * Ln };
+  const pts = [[a.x, a.y], [a1.x, a1.y]];
+  const ah = da[1] === 0, bh = db[1] === 0;
+  if (ah && bh) { const mx = (a1.x + b1.x) / 2; pts.push([mx, a1.y], [mx, b1.y]); }
+  else if (!ah && !bh) { const my = (a1.y + b1.y) / 2; pts.push([a1.x, my], [b1.x, my]); }
+  else if (ah && !bh) pts.push([b1.x, a1.y]);
+  else pts.push([a1.x, b1.y]);
+  pts.push([b1.x, b1.y], [b.x, b.y]);
+  return pts;
+}
+function elBox(e) { const d = S.defs[e.type]; return d ? d.bbox : [-20, -12, 40, 24]; }
+
+/* ====================== rendering ====================== */
+function drawTextAt(c, x, y, text, size, color) {
+  c.save(); c.fillStyle = color || '#000'; c.font = size + 'px sans-serif'; c.textBaseline = 'top'; c.textAlign = 'left';
+  const lines = String(text).split('\n'); let w = 0;
+  lines.forEach((ln, i) => { c.fillText(ln, x, y + i * size * 1.2); w = Math.max(w, c.measureText(ln).width); });
+  c.restore();
+  return [w, lines.length * size * 1.2];
+}
+function drawPage(c, p, ui) {
+  buildTM(p);
+  const W = p.cols * p.colsize, H = p.rows * p.rowsize, k = S.view.k;
+  c.fillStyle = '#fff'; c.fillRect(-20, -20, W + 40, H + 60);
+  c.strokeStyle = '#000'; c.lineWidth = 1.5; c.strokeRect(0, 0, W, H);
+  c.lineWidth = 0.6; c.strokeStyle = '#555';
+  c.beginPath(); c.moveTo(-20, -20); c.lineTo(W + 20, -20); c.lineTo(W + 20, H + 20); c.lineTo(-20, H + 20); c.closePath(); c.stroke();
+  c.fillStyle = '#444'; c.font = '10px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  for (let i = 0; i < p.cols; i++) { c.beginPath(); c.moveTo(i * p.colsize, -20); c.lineTo(i * p.colsize, 0); c.stroke(); c.fillText(String(i + 1), (i + .5) * p.colsize, -10); }
+  for (let j = 0; j < p.rows; j++) { c.beginPath(); c.moveTo(-20, j * p.rowsize); c.lineTo(0, j * p.rowsize); c.stroke(); c.fillText(String.fromCharCode(65 + j % 26), -10, (j + .5) * p.rowsize); }
+  c.textAlign = 'left'; c.textBaseline = 'top'; c.fillStyle = '#000'; c.font = '12px sans-serif';
+  c.fillText(p.title, 4, H + 4);
+
+  // conductors
+  p.conductors.forEach(cd => {
+    const pts = condPts(p, cd); if (!pts) return;
+    const isSel = S.sel && S.sel.o === cd;
+    c.beginPath(); pts.forEach((q, i) => i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1]));
+    c.strokeStyle = isSel ? '#1e6fff' : '#000'; c.lineWidth = isSel ? 2.5 : 1; c.setLineDash([]); c.stroke();
+  });
+  // elements
+  p.elements.slice().sort((a, b) => (a.z || 0) - (b.z || 0)).forEach(e => {
+    const d = S.defs[e.type];
+    c.save(); c.translate(e.x, e.y); c.rotate(e.o * Math.PI / 2);
+    if (d) d.shapes.forEach(s => drawShape(c, s));
+    else { c.strokeStyle = '#c00'; c.lineWidth = 1; c.strokeRect(-20, -12, 40, 24); c.fillStyle = '#c00'; c.font = '7px sans-serif'; c.fillText((e.type.split('/').pop() || '?').slice(0, 14), -18, -3); }
+    c.restore();
+    e.texts.forEach(t => { if (!t.text) return; const r = ROT(t.x, t.y, e.o); drawTextAt(c, e.x + r[0], e.y + r[1], t.text, t.size); });
+    if (S.sel && S.sel.o === e) {
+      const b = elBox(e); c.save(); c.translate(e.x, e.y); c.rotate(e.o * Math.PI / 2);
+      c.setLineDash([4, 3]); c.strokeStyle = '#1e6fff'; c.lineWidth = 1.5; c.strokeRect(b[0] - 3, b[1] - 3, b[2] + 6, b[3] + 6); c.restore();
+    }
+  });
+  // free texts
+  p.texts.forEach(t => {
+    c.save(); c.translate(t.x, t.y); if (t.rot) c.rotate(t.rot * Math.PI / 180);
+    const sz = drawTextAt(c, 0, 0, t.text, t.size); t._w = sz[0]; t._h = sz[1];
+    if (S.sel && S.sel.o === t) { c.setLineDash([4, 3]); c.strokeStyle = '#1e6fff'; c.lineWidth = 1.5; c.strokeRect(-2, -2, sz[0] + 4, sz[1] + 4); }
+    c.restore();
+  });
+  if (ui) {
+    const showT = S.tool === 'wire' || (S.sel && S.sel.k === 'el');
+    p._tm.forEach((t, id) => {
+      const on = S.wireFrom === id;
+      if (!(showT && (S.tool === 'wire' || t.el === S.sel.o)) && !on) return;
+      c.beginPath(); c.arc(t.x, t.y, Math.max(3, 7 / k), 0, Math.PI * 2);
+      c.fillStyle = on ? 'rgba(220,0,0,.85)' : 'rgba(30,111,255,.45)'; c.fill();
+    });
+  }
+}
+function render() {
+  if (!S.pages.length) return;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#e9ecef'; ctx.fillRect(0, 0, cv.width, cv.height);
+  const v = S.view;
+  ctx.setTransform(DPR * v.k, 0, 0, DPR * v.k, DPR * v.x, DPR * v.y);
+  drawPage(ctx, page(), true);
+}
+function resize() {
+  DPR = window.devicePixelRatio || 1;
+  const r = cv.getBoundingClientRect();
+  cv.width = Math.max(1, Math.round(r.width * DPR)); cv.height = Math.max(1, Math.round(r.height * DPR));
+  render();
+}
+function fit() {
+  const p = page(); if (!p) return;
+  const r = cv.getBoundingClientRect(); if (!r.width) { S.view = { x: 20, y: 20, k: 0.5 }; return; }
+  const W = p.cols * p.colsize + 60, H = p.rows * p.rowsize + 90;
+  const k = Math.min(r.width / W, r.height / H);
+  S.view = { k, x: (r.width - (W - 60) * k) / 2, y: (r.height - (H - 90) * k) / 2 };
+}
+const toWorld = (sx, sy) => ({ x: (sx - S.view.x) / S.view.k, y: (sy - S.view.y) / S.view.k });
+
+/* ====================== undo ====================== */
+const snapshot = () => JSON.stringify(S.pages, (k, v) => k[0] === '_' ? undefined : v);
+function pushUndo(s) { S.undo.push(s || snapshot()); if (S.undo.length > 60) S.undo.shift(); }
+function doUndo() {
+  if (!S.undo.length) { toast('چیزی برای بازگشت نیست'); return; }
+  S.pages = JSON.parse(S.undo.pop()); S.cur = Math.min(S.cur, S.pages.length - 1); S.sel = null; S.wireFrom = null; refresh();
+}
+
+/* ====================== hit testing ====================== */
+function hitAny(w) {
+  const p = page(), k = S.view.k;
+  for (let i = p.texts.length - 1; i >= 0; i--) {
+    const t = p.texts[i];
+    if (w.x >= t.x - 3 && w.x <= t.x + (t._w || 30) + 3 && w.y >= t.y - 3 && w.y <= t.y + (t._h || t.size) + 3) return { k: 'tx', o: t };
+  }
+  for (let i = p.elements.length - 1; i >= 0; i--) {
+    const e = p.elements[i], r = ROT(w.x - e.x, w.y - e.y, (4 - e.o) % 4), b = elBox(e), m = 4 / k;
+    if (r[0] >= b[0] - m && r[0] <= b[0] + b[2] + m && r[1] >= b[1] - m && r[1] <= b[1] + b[3] + m) return { k: 'el', o: e };
+  }
+  for (let i = p.conductors.length - 1; i >= 0; i--) {
+    const pts = condPts(p, p.conductors[i]); if (!pts) continue;
+    for (let j = 0; j < pts.length - 1; j++) if (distSeg(w, pts[j], pts[j + 1]) < 8 / k) return { k: 'co', o: p.conductors[i] };
+  }
+  return null;
+}
+function distSeg(w, a, b) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy;
+  let t = l2 ? ((w.x - a[0]) * dx + (w.y - a[1]) * dy) / l2 : 0; t = clamp(t, 0, 1);
+  return Math.hypot(w.x - (a[0] + t * dx), w.y - (a[1] + t * dy));
+}
+function nearTerm(w) {
+  const p = page(); let best = null, bd = 26 / S.view.k;
+  (p._tm || buildTM(p)).forEach((t, id) => { const d = Math.hypot(t.x - w.x, t.y - w.y); if (d < bd) { bd = d; best = id; } });
+  return best;
+}
+
+/* ====================== interaction ====================== */
+const ptrs = new Map(); let drag = null, pinch = null;
+const rel = ev => { const r = cv.getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; };
+cv.addEventListener('pointerdown', ev => {
+  cv.setPointerCapture(ev.pointerId);
+  const q = rel(ev); ptrs.set(ev.pointerId, q);
+  if (ptrs.size === 2) {
+    const a = Array.from(ptrs.values()), cx = (a[0].x + a[1].x) / 2, cy = (a[0].y + a[1].y) / 2;
+    pinch = { d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1, k: S.view.k, w: toWorld(cx, cy) };
+    drag = null; return;
+  }
+  if (ptrs.size > 2) return;
+  const w = toWorld(q.x, q.y);
+  drag = { sx: q.x, sy: q.y, moved: false, mode: 'pan', vx: S.view.x, vy: S.view.y, w0: w };
+  if (S.tool === 'select') {
+    const hit = hitAny(w);
+    S.sel = hit; updateUI();
+    if (hit && hit.k !== 'co') { drag.mode = 'move'; drag.ox = hit.o.x; drag.oy = hit.o.y; drag.snap = snapshot(); }
+    render();
+  }
+});
+cv.addEventListener('pointermove', ev => {
+  if (!ptrs.has(ev.pointerId)) return;
+  const q = rel(ev); ptrs.set(ev.pointerId, q);
+  if (ptrs.size >= 2 && pinch) {
+    const a = Array.from(ptrs.values()), cx = (a[0].x + a[1].x) / 2, cy = (a[0].y + a[1].y) / 2;
+    const d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) || 1;
+    const k = clamp(pinch.k * d / pinch.d, 0.08, 8);
+    S.view.k = k; S.view.x = cx - pinch.w.x * k; S.view.y = cy - pinch.w.y * k; render(); return;
+  }
+  if (!drag) return;
+  const dx = q.x - drag.sx, dy = q.y - drag.sy;
+  if (!drag.moved && Math.hypot(dx, dy) > 7) { drag.moved = true; if (drag.mode === 'move') pushUndo(drag.snap); }
+  if (!drag.moved) return;
+  if (drag.mode === 'pan') { S.view.x = drag.vx + dx; S.view.y = drag.vy + dy; }
+  else { const w = toWorld(q.x, q.y); S.sel.o.x = snap(drag.ox + (w.x - drag.w0.x)); S.sel.o.y = snap(drag.oy + (w.y - drag.w0.y)); }
+  render();
+});
+function endPtr(ev) {
+  if (!ptrs.has(ev.pointerId)) return;
+  const q = rel(ev); ptrs.delete(ev.pointerId);
+  if (ptrs.size < 2) pinch = null;
+  if (drag && !drag.moved && ptrs.size === 0 && ev.type === 'pointerup') tap(toWorld(q.x, q.y));
+  if (ptrs.size === 0) { if (drag && drag.moved && drag.mode === 'move') autosave(); drag = null; }
+}
+cv.addEventListener('pointerup', endPtr);
+cv.addEventListener('pointercancel', endPtr);
+cv.addEventListener('wheel', ev => {
+  ev.preventDefault(); const q = rel(ev), w = toWorld(q.x, q.y);
+  const k = clamp(S.view.k * (ev.deltaY < 0 ? 1.15 : 1 / 1.15), 0.08, 8);
+  S.view.k = k; S.view.x = q.x - w.x * k; S.view.y = q.y - w.y * k; render();
+}, { passive: false });
+
+async function tap(w) {
+  const p = page();
+  if (S.tool === 'wire') {
+    const id = nearTerm(w);
+    if (id == null) { S.wireFrom = null; hint('روی یک ترمینال (دایرهٔ آبی) بزنید'); render(); return; }
+    if (S.wireFrom == null) { S.wireFrom = id; hint('حالا ترمینال دوم را انتخاب کنید'); }
+    else if (S.wireFrom !== id) {
+      const a = S.wireFrom, ex = p.conductors.some(c => (c.t1 === a && c.t2 === id) || (c.t1 === id && c.t2 === a));
+      if (!ex) { pushUndo(); p.conductors.push({ id: ++S.n, t1: a, t2: id, attrs: {} }); autosave(); }
+      S.wireFrom = null; hint('');
+    } else S.wireFrom = null;
+    render();
+  } else if (S.tool === 'text') {
+    const t = await ask('متن جدید', '');
+    if (t) { pushUndo(); const o = { id: ++S.n, x: snap(w.x), y: snap(w.y), text: t, size: 12, rot: 0 }; p.texts.push(o); S.sel = { k: 'tx', o }; setTool('select'); autosave(); }
+    render();
+  }
+}
+
+/* ====================== actions ====================== */
+function setTool(t) {
+  S.tool = t; S.wireFrom = null;
+  ['Select', 'Wire', 'Text'].forEach(n => $('t' + n).classList.toggle('on', S.tool === n.toLowerCase()));
+  hint(t === 'wire' ? 'روی یک ترمینال بزنید، سپس ترمینال دوم' : t === 'text' ? 'روی صفحه بزنید تا متن قرار گیرد' : '');
+  render(); updateUI();
+}
+function addElement(key) {
+  const d = S.defs[key]; if (!d) return;
+  const p = page(), r = cv.getBoundingClientRect(), c = toWorld(r.width / 2, r.height / 2);
+  pushUndo();
+  const e = { id: ++S.n, type: key, x: snap(c.x), y: snap(c.y), z: 10, o: 0, uuid: uid(), prefix: '', terms: [], texts: [], info: {} };
+  d.terms.forEach(t => { e.terms.push({ id: ++p.maxT, x: t.x, y: t.y, o: t.o, name: '_', number: '_' }); });
+  p.elements.push(e); S.sel = { k: 'el', o: e };
+  closeSheet(); setTool('select'); autosave(); toast('قطعه را بکشید تا جابه‌جا شود');
+}
+function rotateSel() {
+  if (!S.sel) return;
+  if (S.sel.k === 'el') { pushUndo(); S.sel.o.o = (S.sel.o.o + 1) % 4; }
+  else if (S.sel.k === 'tx') { pushUndo(); S.sel.o.rot = ((S.sel.o.rot || 0) + 90) % 360; }
+  render(); autosave();
+}
+function deleteSel() {
+  if (!S.sel) return; const p = page(); pushUndo();
+  if (S.sel.k === 'el') {
+    const ids = new Set(S.sel.o.terms.map(t => t.id));
+    p.elements = p.elements.filter(e => e !== S.sel.o);
+    p.conductors = p.conductors.filter(c => !ids.has(c.t1) && !ids.has(c.t2));
+  } else if (S.sel.k === 'tx') p.texts = p.texts.filter(t => t !== S.sel.o);
+  else p.conductors = p.conductors.filter(c => c !== S.sel.o);
+  S.sel = null; refresh(); autosave();
+}
+async function editLabel() {
+  if (!S.sel) return;
+  if (S.sel.k === 'tx') { const t = await ask('ویرایش متن', S.sel.o.text); if (t != null && t !== '') { pushUndo(); S.sel.o.text = t; render(); autosave(); } return; }
+  if (S.sel.k !== 'el') return;
+  const e = S.sel.o, t = await ask('برچسب قطعه', e.info.label || '');
+  if (t == null) return;
+  pushUndo(); e.info.label = t;
+  let tx = e.texts.find(x => x.info === 'label');
+  if (!tx) { const b = elBox(e); tx = { x: b[0] + b[2] + 4, y: b[1], text: '', size: 8, from: 'ElementInfo', info: 'label', uuid: uid() }; e.texts.push(tx); }
+  tx.text = t; render(); autosave();
+}
+
+/* ====================== UI plumbing ====================== */
+function hint(t) { const h = $('hint'); h.style.display = t ? 'block' : 'none'; h.textContent = t || ''; if (t && !hint.fix) { } }
+let toastT = null;
+function toast(t) { hint(t); clearTimeout(toastT); toastT = setTimeout(() => hint(S.tool === 'wire' ? 'روی یک ترمینال بزنید، سپس ترمینال دوم' : ''), 2200); if (window.Android && Android.toast && false) Android.toast(t); }
+function updateUI() {
+  $('title').textContent = S.title + ' — ' + (page() ? page().title : '');
+  const k = S.sel && S.sel.k;
+  $('tRot').disabled = !(k === 'el' || k === 'tx');
+  $('tLbl').disabled = !(k === 'el' || k === 'tx');
+  $('tDel').disabled = !k;
+  const pg = $('pages'); pg.innerHTML = '';
+  S.pages.forEach((p, i) => {
+    const b = document.createElement('button'); b.textContent = p.title; if (i === S.cur) b.className = 'on';
+    b.onclick = () => { S.cur = i; S.sel = null; S.wireFrom = null; fit(); refresh(); }; pg.appendChild(b);
+  });
+  const add = document.createElement('button'); add.textContent = '＋'; add.onclick = addPage; pg.appendChild(add);
+}
+function refresh() { updateUI(); render(); }
+function addPage() { pushUndo(); const p = newPage(); const q = page(); if (q) { p.cols = q.cols; p.rows = q.rows; p.colsize = q.colsize; p.rowsize = q.rowsize; } S.pages.push(p); S.cur = S.pages.length - 1; S.sel = null; fit(); refresh(); autosave(); }
+
+function ask(title, val, noInput) {
+  return new Promise(res => {
+    $('dlgT').textContent = title; const i = $('dlgI'); i.value = val || ''; i.style.display = noInput ? 'none' : 'block';
+    $('dlg').style.display = 'flex'; if (!noInput) setTimeout(() => i.focus(), 50);
+    const done = v => { $('dlg').style.display = 'none'; $('dlgOk').onclick = $('dlgNo').onclick = i.onkeydown = null; res(v); };
+    $('dlgOk').onclick = () => done(noInput ? true : i.value); $('dlgNo').onclick = () => done(null);
+    i.onkeydown = e => { if (e.key === 'Enter') done(i.value); };
+  });
+}
+
+/* library sheet */
+function openSheet() { $('sheet').style.display = 'flex'; $('q').value = ''; buildGrid(); }
+function closeSheet() { $('sheet').style.display = 'none'; }
+S.lib = { tab: 'basic', idx: null, cat: '' };
+function libIdx() {
+  if (S.lib.idx) return S.lib.idx;
+  try { S.lib.idx = (window.Android && Android.libIndex) ? JSON.parse(Android.libIndex() || '[]') : []; } catch (e) { S.lib.idx = []; }
+  return S.lib.idx;
+}
+function libDef(path) {
+  const key = 'embed://import/' + path;
+  if (S.defs[key]) return S.defs[key];
+  try {
+    const xml = Android.libRead(path); if (!xml) return null;
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    if (doc.querySelector('parsererror') || doc.documentElement.tagName !== 'definition') return null;
+    const d = parseDef(doc.documentElement, key); d.lib = true; S.defs[key] = d; return d;
+  } catch (e) { return null; }
+}
+function addItem(g, d, label, onclick) {
+  const it = document.createElement('div'); it.className = 'item';
+  const c = document.createElement('canvas'); c.width = 160; c.height = 128; if (d) drawPreview(c, d);
+  const n = document.createElement('div'); n.textContent = label;
+  it.appendChild(c); it.appendChild(n); it.onclick = onclick; g.appendChild(it);
+}
+function buildGrid() {
+  const g = $('grid'), q = $('q').value.trim().toLowerCase(); g.innerHTML = '';
+  $('tabB').classList.toggle('on', S.lib.tab === 'basic'); $('tabL').classList.toggle('on', S.lib.tab === 'lib');
+  $('cat').style.display = S.lib.tab === 'lib' ? 'block' : 'none';
+  if (S.lib.tab === 'lib') { buildLibGrid(g, q); return; }
+  const keys = Object.keys(S.defs).filter(k => !S.defs[k].lib && (!q || S.defs[k].name.toLowerCase().indexOf(q) >= 0 || k.toLowerCase().indexOf(q) >= 0))
+    .sort((a, b) => (S.defs[b].builtin ? 1 : 0) - (S.defs[a].builtin ? 1 : 0) || S.defs[a].name.localeCompare(S.defs[b].name));
+  $('info').textContent = 'نمادهای آماده + قطعات فایل‌هایی که باز کرده‌اید';
+  keys.slice(0, 300).forEach(k => addItem(g, S.defs[k], S.defs[k].name, () => addElement(k)));
+  if (!keys.length) g.textContent = 'قطعه‌ای پیدا نشد';
+}
+function buildLibGrid(g, q) {
+  const idx = libIdx(), sel = $('cat');
+  if (sel._n !== idx.length) {
+    const cats = new Set();
+    idx.forEach(r => { const p = r[0].split('/'); if (p.length > 1) cats.add(p.slice(0, Math.min(2, p.length - 1)).join('/')); });
+    sel.innerHTML = ''; const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'همهٔ دسته‌ها'; sel.appendChild(o0);
+    Array.from(cats).sort().forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o); });
+    sel._n = idx.length; S.lib.cat = '';
+  }
+  sel.value = S.lib.cat;
+  if (!idx.length) { $('info').textContent = 'کتابخانه خالی است. یکی از دکمه‌های «فایل» (zip / qch / elmt) یا «پوشه» (پوشهٔ elements) را بزنید.'; return; }
+  const cat = S.lib.cat;
+  const m = idx.filter(r => (!cat || r[0].indexOf(cat + '/') === 0) && (!q || r[1].toLowerCase().indexOf(q) >= 0 || r[0].toLowerCase().indexOf(q) >= 0));
+  $('info').textContent = m.length + ' نتیجه از ' + idx.length + (m.length > 80 ? ' (۸۰ مورد اول؛ جستجو کنید)' : '');
+  m.slice(0, 80).forEach(r => addItem(g, libDef(r[0]), r[1], () => { const d = libDef(r[0]); if (d) addElement(d.key); else toast('این قطعه خوانده نشد'); }));
+}
+function drawPreview(c, d) {
+  const x = c.getContext('2d'), b = d.bbox, pad = 8, k = Math.min((c.width - 2 * pad) / Math.max(b[2], 1), (c.height - 2 * pad) / Math.max(b[3], 1), 4);
+  x.save(); x.translate(c.width / 2 - (b[0] + b[2] / 2) * k, c.height / 2 - (b[1] + b[3] / 2) * k); x.scale(k, k);
+  d.shapes.forEach(s => drawShape(x, s)); x.restore();
+}
+
+/* menu */
+function openMenu() {
+  const m = $('menu'); m.innerHTML = '';
+  const items = [
+    ['پروژهٔ جدید', async () => { if (await ask('پروژهٔ فعلی بسته شود؟ (ذخیره‌نشده‌ها از بین می‌رود)', '', true)) newProject(); }],
+    ['صفحهٔ جدید', addPage],
+    ['تغییر نام صفحه', async () => { const t = await ask('نام صفحه', page().title); if (t) { page().title = t; refresh(); autosave(); } }],
+    ['تغییر نام پروژه', async () => { const t = await ask('نام پروژه', S.title); if (t) { S.title = t; refresh(); autosave(); } }],
+    ['اندازهٔ صفحه (ستون/سطر)', async () => { const c = await ask('تعداد ستون‌ها', page().cols); if (c == null) return; const r = await ask('تعداد سطرها', page().rows); if (r == null) return; pushUndo(); page().cols = clamp(parseInt(c, 10) || 17, 1, 60); page().rows = clamp(parseInt(r, 10) || 8, 1, 40); fit(); refresh(); autosave(); }],
+    ['حذف این صفحه', async () => { if (S.pages.length < 2) { toast('حداقل یک صفحه لازم است'); return; } if (await ask('این صفحه حذف شود؟', '', true)) { pushUndo(); S.pages.splice(S.cur, 1); S.cur = 0; S.sel = null; fit(); refresh(); autosave(); } }],
+    ['خروجی تصویر PNG', exportPng],
+    ['ذخیره به‌عنوان...', saveProject],
+    ['وارد کردن کتابخانه از فایل (.qch / .zip / .elmt)', () => $('bLibImp').click()],
+    ['وارد کردن کتابخانه از پوشه (elements)', () => $('bLibDir').click()],
+    ['پاک کردن کتابخانهٔ واردشده', async () => { if (window.Android && Android.libClear && await ask('همهٔ قطعات واردشده پاک شود؟', '', true)) { Android.libClear(); S.lib.idx = null; toast('کتابخانه پاک شد'); } }],
+    ['دربارهٔ برنامه', () => ask('QET Mobile — ویرایشگر ساده‌ی نقشه‌های برق با فرمت .qet (GPL-2.0)', '', true)]
+  ];
+  items.forEach(([t, f]) => { const b = document.createElement('button'); b.textContent = t; b.onclick = () => { m.style.display = 'none'; f(); }; m.appendChild(b); });
+  m.style.display = m.style.display === 'block' ? 'none' : 'block';
+}
+
+/* ====================== file I/O ====================== */
+function decodeB64(b) { const bin = atob(b), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new TextDecoder('utf-8').decode(a); }
+function encodeB64(t) { const a = new TextEncoder().encode(t); let s = ''; for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s); }
+function saveOut(name, mime, b64) {
+  if (window.Android && Android.saveFile) Android.saveFile(name, mime, b64);
+  else { const a = document.createElement('a'); a.href = 'data:' + mime + ';base64,' + b64; a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+}
+function saveProject() { try { saveOut(S.fileName, 'application/octet-stream', encodeB64(buildXml())); } catch (e) { toast('خطا در ذخیره: ' + e.message); } }
+function exportPng() {
+  const p = page(), W = p.cols * p.colsize + 60, H = p.rows * p.rowsize + 90, sc = 2;
+  const c = document.createElement('canvas'); c.width = W * sc; c.height = H * sc;
+  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+  x.setTransform(sc, 0, 0, sc, 30 * sc, 30 * sc);
+  const keep = S.sel; S.sel = null; drawPage(x, p, false); S.sel = keep;
+  saveOut((S.title || 'diagram') + '-' + p.title + '.png', 'image/png', c.toDataURL('image/png').split(',')[1]);
+}
+function openText(name, text) {
+  try { loadXml(text, name); fit(); refresh(); toast('باز شد: ' + S.title + ' (' + S.pages.length + ' صفحه)'); autosave(); }
+  catch (e) { toast('خطا: ' + e.message); }
+}
+window.onNativeFile = (name, b64) => openText(name, decodeB64(b64));
+window.onBack = () => {
+  if ($('dlg').style.display === 'flex') { $('dlgNo').click(); return true; }
+  if ($('sheet').style.display === 'flex') { closeSheet(); return true; }
+  if ($('menu').style.display === 'block') { $('menu').style.display = 'none'; return true; }
+  if (S.tool !== 'select') { setTool('select'); return true; }
+  return false;
+};
+$('fileIn').onchange = ev => { const f = ev.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => openText(f.name, r.result); r.readAsText(f); ev.target.value = ''; };
+
+/* ====================== wiring of buttons ====================== */
+$('bMenu').onclick = openMenu;
+$('bOpen').onclick = () => { if (window.Android && Android.openFile) Android.openFile(); else $('fileIn').click(); };
+$('bSave').onclick = saveProject;
+$('bUndo').onclick = doUndo;
+$('bFit').onclick = () => { fit(); render(); };
+$('tSelect').onclick = () => setTool('select');
+$('tWire').onclick = () => setTool(S.tool === 'wire' ? 'select' : 'wire');
+$('tText').onclick = () => setTool(S.tool === 'text' ? 'select' : 'text');
+$('tAdd').onclick = openSheet;
+$('tRot').onclick = rotateSel;
+$('tLbl').onclick = editLabel;
+$('tDel').onclick = deleteSel;
+$('sClose').onclick = closeSheet;
+$('q').oninput = buildGrid;
+$('tabB').onclick = () => { S.lib.tab = 'basic'; buildGrid(); };
+$('tabL').onclick = () => { S.lib.tab = 'lib'; buildGrid(); };
+$('bLibDir').onclick = () => { if (window.Android && Android.libImportFolder) Android.libImportFolder(); else toast('وارد کردن پوشه فقط در اپ اندروید کار می‌کند'); };
+$('cat').onchange = () => { S.lib.cat = $('cat').value; buildGrid(); };
+$('bLibImp').onclick = () => { if (window.Android && Android.libImport) Android.libImport(); else toast('وارد کردن کتابخانه فقط در اپ اندروید کار می‌کند'); };
+window.onLibImported = (n, total, msg) => {
+  S.lib.idx = null; S.lib.tab = 'lib';
+  if ($('sheet').style.display === 'flex') buildGrid();
+  if (msg) ask((n ? n + ' قطعه وارد شد.\n' : 'قطعه‌ای وارد نشد.\n') + msg, '', true);
+  else toast(n + ' قطعه وارد شد (جمع کتابخانه: ' + total + ')');
+};
+window.addEventListener('resize', () => { resize(); });
+document.addEventListener('click', e => { if (!e.target.closest('#menu') && e.target.id !== 'bMenu') $('menu').style.display = 'none'; });
+
+/* ====================== start ====================== */
+initBuiltins();
+loadLib();
+let restored = false;
+try {
+  const a = localStorage.getItem('qet_auto');
+  if (a) { loadXml(a, localStorage.getItem('qet_auto_name') || 'project.qet'); restored = true; }
+} catch (e) { restored = false; }
+if (!restored) newProject();
+resize(); if (restored) fit(); refresh();
+</script>
+</body>
+</html>
